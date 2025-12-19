@@ -10,8 +10,8 @@ export default async function PaymentSuccess({
 }: {
   searchParams: { session_id?: string };
 }) {
-  const sessionId = searchParams.session_id;
-
+  const sessionId = searchParams?.session_id;
+console.log("Payment Success Session ID:", sessionId);
 //   if (!sessionId) {
 //     redirect("/menu");
 //   }

@@ -1,0 +1,196 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Platform owner (you) — for white-label/reseller features later
+model Reseller {
+  id                String    @id @default(cuid())
+  slug              String    @unique
+  name              String
+  branding          Json      @default("{\"primaryColor\": \"#3b82f6\", \"logoUrl\": null, \"font\": \"Inter\"}")
+  qrSigningSecret   String    @map("qr_signing_secret")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  venues            Venue[]
+
+  @@index([slug])
+  @@map("resellers")
+}
+
+// One restaurant = One venue, owned by a Supabase auth user
+model Venue {
+  id         String    @id @default(cuid())
+  name       String
+  slug       String    @unique // e.g., "beach-bar" → yourapp.com/beach-bar
+  ownerId    String    // Supabase auth user ID (plain string)
+  resellerId String?   @map("reseller_id")
+
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  reseller   Reseller? @relation(fields: [resellerId], references: [id], onDelete: SetNull)
+  branches   Branch[]
+
+  @@unique([resellerId, slug])
+  @@index([ownerId])     // For fast queries: find venues by owner
+  @@index([resellerId])
+  @@map("venues")
+}
+
+// Physical area inside a venue (e.g., Main Floor, Rooftop, Bar)
+model Branch {
+  id         String    @id @default(cuid())
+  venueId    String    @map("venue_id")
+  venue      Venue     @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  name       String    @default("Main Branch")
+
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  categories MenuCategory[]
+  tables     Table[]
+  orders     Order[]
+
+  @@index([venueId])
+  @@map("branches")
+}
+
+// Table with QR code
+model Table {
+  id         String    @id @default(cuid())
+  branchId   String    @map("branch_id")
+  branch     Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  number     String
+  area       String?
+  qrVersion  Int       @default(1) @map("qr_version")
+
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  orders     Order[]
+
+  @@unique([branchId, number])
+  @@index([branchId])
+  @@map("tables")
+}
+
+// Menu category
+model MenuCategory {
+  id         String    @id @default(cuid())
+  branchId   String    @map("branch_id")
+  branch     Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  name       Json
+  order      Int       @default(0)
+  isActive   Boolean   @default(true) @map("is_active")
+
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  items      MenuItem[]
+
+  @@index([branchId, order])
+  @@map("menu_categories")
+}
+
+// Menu item
+model MenuItem {
+  id           String    @id @default(cuid())
+  categoryId   String    @map("category_id")
+  category     MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name         Json
+  description  Json?
+  price        Decimal   @db.Decimal(10, 2)
+  imageUrl     String?   @map("image_url")
+  available    Boolean   @default(true)
+  allergens    String[]  @default([])
+  tags         String[]  @default([])
+
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  modifiers    Modifier[]
+  orderItems   OrderItem[]
+
+  @@index([categoryId])
+  @@map("menu_items")
+}
+
+model Modifier {
+  id      String  @id @default(cuid())
+  itemId  String  @map("item_id")
+  item    MenuItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  name    Json
+  options Json
+
+  @@index([itemId])
+  @@map("modifiers")
+}
+
+// Orders
+model Order {
+  id               String         @id @default(cuid())
+  branchId         String         @map("branch_id")
+  branch           Branch         @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  tableId          String?        @map("table_id")
+  table            Table?         @relation(fields: [tableId], references: [id], onDelete: SetNull)
+  orderNumber      String         @unique @map("order_number")
+  status           OrderStatus    @default(NEW)
+  paymentStatus    PaymentStatus  @default(PENDING) @map("payment_status")
+  stripeSessionId  String?        @map("stripe_session_id")
+  paidAt           DateTime?      @map("paid_at")
+
+  items            OrderItem[]
+  subtotal         Decimal        @db.Decimal(10, 2)
+  tax              Decimal        @db.Decimal(10, 2) @default(0)
+  total            Decimal        @db.Decimal(10, 2)
+  tip              Decimal?       @db.Decimal(10, 2)
+  notes            String?
+  customerEmail    String?        @map("customer_email")
+  idempotencyKey   String         @unique @map("idempotency_key")
+
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  @@index([branchId, status])
+  @@index([createdAt])
+  @@index([idempotencyKey])
+  @@map("orders")
+}
+
+model OrderItem {
+  id                String    @id @default(cuid())
+  orderId           String    @map("order_id")
+  order             Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId        String    @map("menu_item_id")
+  menuItem          MenuItem  @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+  itemName          String    @map("item_name")
+  quantity          Int
+  priceAtOrder      Decimal   @db.Decimal(10, 2) @map("price_at_order")
+  modifiersSelected Json?     @map("modifiers_selected")
+  subtotal          Decimal   @db.Decimal(10, 2)
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+enum OrderStatus {
+  NEW
+  PREPARING
+  READY
+  SERVED
+  CLOSED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}

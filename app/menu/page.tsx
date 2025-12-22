@@ -99,9 +99,9 @@ export default async function MenuPage({
 
   const serializedBranch = {
     ...branch,
-    categories: branch.categories.map((cat) => ({
+    categories: branch.categories.map((cat:any) => ({
       ...cat,
-      items: cat.items.map((item) => ({
+      items: cat.items.map((item:any) => ({
         ...item,
         price: Number(item.price),
         modifiers: item.modifiers || [], // ← Serialize modifiers

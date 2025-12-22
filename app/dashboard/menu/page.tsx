@@ -39,15 +39,15 @@ export default async function MenuPage() {
     orderBy: { order: "asc" },
   });
 
-  const totalItems = categories.reduce((acc:number, cat) => acc + cat.items.length, 0);
+  const totalItems = categories.reduce((acc:number, cat:any) => acc + cat.items.length, 0);
   const activeItems = categories.reduce(
-    (acc:number, cat) => acc + cat.items.filter((i: any) => i.available).length,
+    (acc:number, cat:any) => acc + cat.items.filter((i: any) => i.available).length,
     0
   );
 
-  const serializedCategories = categories.map((cat) => ({
+  const serializedCategories = categories.map((cat:any) => ({
     ...cat,
-    items: cat.items.map((item) => ({
+    items: cat.items.map((item:any) => ({
       ...item,
       price: Number(item.price),
     })),

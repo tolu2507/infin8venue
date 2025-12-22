@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/dashboard/settings/page.tsx
 import { prisma } from "@/lib/db";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -120,7 +121,7 @@ export default async function SettingsPage() {
                   <div className="text-center p-6 bg-green-50 rounded-lg">
                     <div className="text-4xl font-bold text-green-600">
                       {branch.categories.reduce(
-                        (acc:number, cat) => acc + cat.items.length,
+                        (acc:number, cat:any) => acc + cat.items.length,
                         0
                       )}
                     </div>

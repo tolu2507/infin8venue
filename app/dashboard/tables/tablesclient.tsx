@@ -143,7 +143,7 @@ export default function TablesClient({
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {tables.map((table) => (
+          {tables.map((table:any) => (
             <Card key={table.id} className="overflow-hidden">
               <CardHeader className="pb-4">
                 <div className="flex justify-between items-center">

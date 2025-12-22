@@ -121,7 +121,7 @@ export default async function MenuPage({
               subtotal: Number(openOrder.subtotal),
               tax: Number(openOrder.tax),
               total: Number(openOrder.total),
-              items: openOrder.items.map((i) => ({
+              items: openOrder.items.map((i:any) => ({
                 id: i.menuItem.id,
                 name: i.menuItem.name,
                 price: Number(i.priceAtOrder),

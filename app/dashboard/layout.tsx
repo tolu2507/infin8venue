@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/dashboard/layout.tsx
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -52,7 +53,7 @@ export default async function DashboardLayout({
           <p className="text-sm text-gray-600">Venue Admin</p>
         </div>
         <nav className="mt-6">
-          {navItems.map((item) => (
+          {navItems.map((item:any) => (
             <Link key={item.href} href={item.href}>
               <Button
                 variant="ghost"

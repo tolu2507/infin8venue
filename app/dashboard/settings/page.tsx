@@ -96,14 +96,14 @@ export default async function SettingsPage() {
       {/* Branch Tabs */}
       <Tabs defaultValue={venue.branches[0].id} className="w-full">
         <TabsList className="grid grid-cols-2 md:grid-cols-4 w-full mb-8">
-          {venue.branches.map((branch) => (
+          {venue.branches.map((branch:any) => (
             <TabsTrigger key={branch.id} value={branch.id}>
               {branch.name}
             </TabsTrigger>
           ))}
         </TabsList>
 
-        {venue.branches.map((branch) => (
+        {venue.branches.map((branch:any) => (
           <TabsContent key={branch.id} value={branch.id} className="space-y-8">
             {/* Menu Status */}
             <Card>

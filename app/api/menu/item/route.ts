@@ -95,7 +95,7 @@ export async function POST(request: Request) {
     // Then create modifiers linked to item
     if (modifiers.length > 0) {
       await prisma.modifier.createMany({
-        data: modifiers.map((mod) => ({
+        data: modifiers.map((mod:any) => ({
           itemId: item.id,
           name: mod.name,
           options: mod.options,

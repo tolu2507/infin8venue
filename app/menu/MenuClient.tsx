@@ -78,7 +78,7 @@ export default function MenuClient({ branch, context, openOrder }: any) {
     setCart((prev) => {
       const existing = prev.find((i) => i.id === item.id);
       if (existing) {
-        return prev.map((i) =>
+        return prev.map((i:any) =>
           i.id === item.id ? { ...i, qty: i.qty + 1 } : i
         );
       }
@@ -94,18 +94,18 @@ export default function MenuClient({ branch, context, openOrder }: any) {
 
   const updateQty = (id: string, delta: number) => {
     setCart((prev) => {
-      const existing = prev.find((i) => i.id === id);
+      const existing = prev.find((i:any) => i.id === id);
       if (!existing) return prev;
       const newQty = existing.qty + delta;
       if (newQty <= 0) {
-        return prev.filter((i) => i.id !== id);
+        return prev.filter((i:any) => i.id !== id);
       }
-      return prev.map((i) => (i.id === id ? { ...i, qty: newQty } : i));
+      return prev.map((i:any) => (i.id === id ? { ...i, qty: newQty } : i));
     });
   };
 
   const removeFromCart = (id: string) => {
-    setCart((prev) => prev.filter((i) => i.id !== id));
+    setCart((prev) => prev.filter((i:any) => i.id !== id));
     toast.info("Item removed");
   };
 
@@ -555,7 +555,7 @@ export default function MenuClient({ branch, context, openOrder }: any) {
             <div>
               <p className="text-center mb-3 text-sm">Add Tip</p>
               <div className="grid grid-cols-4 gap-2">
-                {[0, 10, 15, 20].map((p) => (
+                {[0, 10, 15, 20].map((p:number) => (
                   <Button
                     key={p}
                     variant={tipPercent === p ? "default" : "outline"}

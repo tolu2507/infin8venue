@@ -63,7 +63,7 @@ function ModifierInput({
   };
 
   const removeOption = (opt: string) => {
-    setOptions(options.filter((o) => o !== opt));
+    setOptions(options.filter((o:any) => o !== opt));
   };
 
   return (
@@ -81,7 +81,7 @@ function ModifierInput({
           onKeyDown={addOption}
         />
         <div className="flex flex-wrap gap-2 mt-3">
-          {options.map((opt) => (
+          {options.map((opt:any) => (
             <Badge key={opt} variant="secondary" className="px-3 py-1 text-sm">
               {opt}
               <button

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/dashboard/orders/page.tsx
 import { prisma } from "@/lib/db";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -40,7 +41,7 @@ export default async function LiveOrdersPage() {
 
   console.log({orders})
 
-  const serializedOrders = orders.map((order) => ({
+  const serializedOrders = orders.map((order:any) => ({
     id: order.id,
     orderNumber: order.orderNumber,
     status: order.status,
@@ -51,7 +52,7 @@ export default async function LiveOrdersPage() {
     tip: order.tip ? Number(order.tip) : 0,
     notes: order.notes || "",
     tableNumber: order.table?.number || "Walk-in",
-    items: order.items.map((item) => ({
+    items: order.items.map((item:any) => ({
       quantity: item.quantity,
       name: item.itemName,
       price: Number(item.priceAtOrder),

@@ -73,12 +73,12 @@ export default function LiveOrdersClient({
             setOrders((prev) => [serialized, ...prev]);
           } else if (payload.eventType === "UPDATE") {
             setOrders((prev) =>
-              prev.map((o) =>
+              prev.map((o:any) =>
                 o.id === serialized.id ? { ...o, ...serialized } : o
               )
             );
           } else if (payload.eventType === "DELETE") {
-            setOrders((prev) => prev.filter((o) => o.id !== payload.old.id));
+            setOrders((prev) => prev.filter((o:any) => o.id !== payload.old.id));
           }
         }
       )
@@ -123,7 +123,7 @@ export default function LiveOrdersClient({
       </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8">
-        {orders.map((order) => {
+        {orders.map((order:any) => {
           const config = statusConfig[order.status] || {
             color: "bg-gray-600",
             next: "",
@@ -164,7 +164,7 @@ export default function LiveOrdersClient({
                   {order.items.length === 0 ? (
                     <p className="text-white text-center py-4">No items</p>
                   ) : (
-                    order.items.map((item, i) => (
+                    order.items.map((item:any, i:any) => (
                       <div
                         key={i}
                         className="flex justify-between items-center py-2 border-b text-white border-gray-800 last:border-0">

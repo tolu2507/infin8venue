@@ -39,9 +39,9 @@ export default async function MenuPage() {
     orderBy: { order: "asc" },
   });
 
-  const totalItems = categories.reduce((acc, cat) => acc + cat.items.length, 0);
+  const totalItems = categories.reduce((acc:number, cat) => acc + cat.items.length, 0);
   const activeItems = categories.reduce(
-    (acc, cat) => acc + cat.items.filter((i: any) => i.available).length,
+    (acc:number, cat) => acc + cat.items.filter((i: any) => i.available).length,
     0
   );
 

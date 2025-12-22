@@ -14,7 +14,14 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Package, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Plus,
+  Package,
+  Loader2,
+  ChevronDown,
+  ChevronUp,
+  X,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +39,76 @@ const getText = (json: any, fallback = "Unnamed") => {
   if (!json) return fallback;
   return json.en || fallback;
 };
+
+// Modifier Input Component
+function ModifierInput({
+  index,
+  defaultValue,
+}: {
+  index: number;
+  defaultValue?: any;
+}) {
+  const [name, setName] = useState(defaultValue?.name?.en || "");
+  const [options, setOptions] = useState<string[]>(defaultValue?.options || []);
+  const [currentOption, setCurrentOption] = useState("");
+
+  const addOption = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && currentOption.trim()) {
+      e.preventDefault();
+      if (!options.includes(currentOption.trim())) {
+        setOptions([...options, currentOption.trim()]);
+      }
+      setCurrentOption("");
+    }
+  };
+
+  const removeOption = (opt: string) => {
+    setOptions(options.filter((o) => o !== opt));
+  };
+
+  return (
+    <div className="space-y-3 p-4 border rounded-lg bg-white">
+      <Input
+        placeholder="Modifier name (e.g., Spice Level)"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
+      <div>
+        <Input
+          placeholder="Type option and press Enter (e.g., Mild)"
+          value={currentOption}
+          onChange={(e) => setCurrentOption(e.target.value)}
+          onKeyDown={addOption}
+        />
+        <div className="flex flex-wrap gap-2 mt-3">
+          {options.map((opt) => (
+            <Badge key={opt} variant="secondary" className="px-3 py-1 text-sm">
+              {opt}
+              <button
+                type="button"
+                onClick={() => removeOption(opt)}
+                className="ml-2 hover:text-red-600">
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      </div>
+
+      {/* Hidden inputs for form submission */}
+      {name && options.length > 0 && (
+        <>
+          <input type="hidden" name={`modifier_name_${index}`} value={name} />
+          <input
+            type="hidden"
+            name={`modifier_options_${index}`}
+            value={options.join(",")}
+          />
+        </>
+      )}
+    </div>
+  );
+}
 
 export default function MenuClient({
   categories,
@@ -84,6 +161,24 @@ export default function MenuClient({
   // Add Item
   const addItem = async (formData: FormData) => {
     setLoading(`add-item-${openAddItem}`);
+
+    // Build modifiers array
+    const modifiers = [];
+    for (let i = 0; i < 3; i++) {
+      const name = formData.get(`modifier_name_${i}`) as string;
+      const optionsStr = formData.get(`modifier_options_${i}`) as string;
+      if (name && optionsStr) {
+        modifiers.push({
+          name: { en: name },
+          options: optionsStr.split(","),
+        });
+      }
+    }
+
+    if (modifiers.length > 0) {
+      formData.append("modifiers", JSON.stringify(modifiers));
+    }
+
     const res = await fetch("/api/menu/item", {
       method: "POST",
       body: formData,
@@ -123,6 +218,24 @@ export default function MenuClient({
   // Edit Item
   const editItem = async (formData: FormData) => {
     setLoading(`edit-item-${openEditItem.id}`);
+
+    // Build modifiers array
+    const modifiers = [];
+    for (let i = 0; i < 3; i++) {
+      const name = formData.get(`modifier_name_${i}`) as string;
+      const optionsStr = formData.get(`modifier_options_${i}`) as string;
+      if (name && optionsStr) {
+        modifiers.push({
+          name: { en: name },
+          options: optionsStr.split(","),
+        });
+      }
+    }
+
+    if (modifiers.length > 0) {
+      formData.append("modifiers", JSON.stringify(modifiers));
+    }
+
     const res = await fetch("/api/menu/item", {
       method: "PATCH",
       body: formData,
@@ -308,24 +421,27 @@ export default function MenuClient({
                           Add Item
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
+                      <DialogContent className="sm:max-w-lg">
                         <DialogHeader>
-                          <DialogTitle>Add Item</DialogTitle>
+                          <DialogTitle>Add New Item</DialogTitle>
                         </DialogHeader>
-                        <form action={addItem} className="space-y-4">
+                        <form action={addItem} className="space-y-6">
                           <input
                             type="hidden"
                             name="categoryId"
                             value={cat.id}
                           />
+
                           <div>
                             <Label>Name</Label>
                             <Input name="name" required className="mt-2" />
                           </div>
+
                           <div>
                             <Label>Description</Label>
                             <Textarea name="description" className="mt-2" />
                           </div>
+
                           <div>
                             <Label>Price</Label>
                             <Input
@@ -336,6 +452,7 @@ export default function MenuClient({
                               className="mt-2"
                             />
                           </div>
+
                           <div>
                             <Label>Image</Label>
                             <Input
@@ -345,6 +462,17 @@ export default function MenuClient({
                               className="mt-2"
                             />
                           </div>
+
+                          {/* Smart Modifiers */}
+                          <div className="space-y-4">
+                            <Label>Modifiers (e.g., Spice Level, Extras)</Label>
+                            <div className="space-y-6">
+                              <ModifierInput index={0} />
+                              <ModifierInput index={1} />
+                              <ModifierInput index={2} />
+                            </div>
+                          </div>
+
                           <Button
                             type="submit"
                             className="w-full"
@@ -409,7 +537,7 @@ export default function MenuClient({
                                 <span
                                   className={` ${
                                     isExpanded ? "" : "line-clamp-3"
-                                  }`}>
+                                  } `}>
                                   {description}
                                 </span>
                                 {shouldTruncate && (
@@ -451,18 +579,19 @@ export default function MenuClient({
                                       Edit
                                     </Button>
                                   </DialogTrigger>
-                                  <DialogContent>
+                                  <DialogContent className="sm:max-w-lg">
                                     <DialogHeader>
                                       <DialogTitle>Edit Item</DialogTitle>
                                     </DialogHeader>
                                     <form
                                       action={editItem}
-                                      className="space-y-4">
+                                      className="space-y-6">
                                       <input
                                         type="hidden"
                                         name="id"
                                         value={item.id}
                                       />
+
                                       <div>
                                         <Label>Name</Label>
                                         <Input
@@ -472,6 +601,7 @@ export default function MenuClient({
                                           className="mt-2"
                                         />
                                       </div>
+
                                       <div>
                                         <Label>Description</Label>
                                         <Textarea
@@ -482,6 +612,7 @@ export default function MenuClient({
                                           className="mt-2"
                                         />
                                       </div>
+
                                       <div>
                                         <Label>Price</Label>
                                         <Input
@@ -493,8 +624,9 @@ export default function MenuClient({
                                           className="mt-2"
                                         />
                                       </div>
+
                                       <div>
-                                        <Label>Image (optional)</Label>
+                                        <Label>Image</Label>
                                         <Input
                                           type="file"
                                           name="image"
@@ -502,6 +634,31 @@ export default function MenuClient({
                                           className="mt-2"
                                         />
                                       </div>
+
+                                      {/* Smart Modifiers */}
+                                      <div className="space-y-4">
+                                        <Label>Modifiers</Label>
+                                        <div className="space-y-6">
+                                          {item.modifiers?.length > 0 ? (
+                                            item.modifiers.map(
+                                              (mod: any, i: number) => (
+                                                <ModifierInput
+                                                  key={i}
+                                                  index={i}
+                                                  defaultValue={mod}
+                                                />
+                                              )
+                                            )
+                                          ) : (
+                                            <>
+                                              <ModifierInput index={0} />
+                                              <ModifierInput index={1} />
+                                              <ModifierInput index={2} />
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+
                                       <Button
                                         type="submit"
                                         className="w-full"

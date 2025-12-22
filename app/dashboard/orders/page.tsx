@@ -1,73 +1,66 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/dashboard/orders/page.tsx
-"use client";
+import { prisma } from "@/lib/db";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import LiveOrdersClient from "./liveorderclient";
 
-import { useEffect, useState } from "react";
-import { supabaseBrowser } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
+export const dynamic = "force-dynamic";
 
-export default function LiveOrders() {
-  const [orders, setOrders] = useState<any[]>([]);
+export default async function LiveOrdersPage() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  useEffect(() => {
-    const channel = supabaseBrowser
-      .channel("orders")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "Order" },
-        (payload: any) => {
-          setOrders((prev) => {
-            const filtered = prev.filter((o) => o.id !== payload.new.id);
-            return payload.eventType === "DELETE"
-              ? filtered
-              : [...filtered, payload.new];
-          });
-        }
-      )
-      .subscribe();
+  if (!user) redirect("/login");
 
-    supabaseBrowser
-      .from("Order")
-      .select("*")
-      .then(({ data }) => setOrders(data || []));
+  const venue = await prisma.venue.findFirst({
+    where: { ownerId: user.id },
+    select: { id: true },
+  });
 
-    return () => {
-      supabaseBrowser.removeChannel(channel);
-    };
-  }, []);
+  if (!venue) redirect("/onboarding");
 
-  const updateStatus = async (id: number, status: string) => {
-    await supabaseBrowser.from("Order").update({ status }).eq("id", id);
-  };
+  const orders = await prisma.order.findMany({
+    where: {
+      branch: { venueId: venue.id },
+    },
+    include: {
+      items: {
+        include: {
+          menuItem: true,
+        },
+      },
+      table: {
+        select: { number: true },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  console.log({orders})
+
+  const serializedOrders = orders.map((order) => ({
+    id: order.id,
+    orderNumber: order.orderNumber,
+    status: order.status,
+    paymentStatus: order.paymentStatus,
+    subtotal: Number(order.subtotal),
+    tax: Number(order.tax),
+    total: Number(order.total),
+    tip: order.tip ? Number(order.tip) : 0,
+    notes: order.notes || "",
+    tableNumber: order.table?.number || "Walk-in",
+    items: order.items.map((item) => ({
+      quantity: item.quantity,
+      name: item.itemName,
+      price: Number(item.priceAtOrder),
+      subtotal: Number(item.subtotal),
+    })),
+    createdAt: order.createdAt.toISOString(),
+  }));
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-8">Live Orders</h1>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {["NEW", "PREPARING", "READY"].map((status) => (
-          <div key={status} className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-2xl font-bold mb-4">{status}</h2>
-            {orders
-              .filter((o) => o.status === status)
-              .map((order) => (
-                <div key={order.id} className="bg-gray-50 p-4 rounded mb-4">
-                  <p className="font-semibold">Table {order.tableId}</p>
-                  <p>Total: ${order.total}</p>
-                  <Button
-                    onClick={() =>
-                      updateStatus(
-                        order.id,
-                        status === "NEW" ? "PREPARING" : "READY"
-                      )
-                    }
-                    className="mt-2">
-                    → {status === "NEW" ? "Start Preparing" : "Mark Ready"}
-                  </Button>
-                </div>
-              ))}
-          </div>
-        ))}
-      </div>
-    </div>
+    <LiveOrdersClient initialOrders={serializedOrders} />
   );
 }

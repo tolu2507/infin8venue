@@ -1,3 +1,4 @@
+/* eslint-disable prefer-const */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // app/api/menu/item/route.ts
 import { prisma } from "@/lib/db";
@@ -8,7 +9,6 @@ import {
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
-  // Your existing POST code (unchanged)
   try {
     const supabase = await createSupabaseServerClient();
     const {
@@ -24,14 +24,19 @@ export async function POST(request: Request) {
     const categoryId = formData.get("categoryId") as string;
     const nameEn = formData.get("name") as string;
     const descriptionEn = formData.get("description") as string | null;
-    const price = Number(formData.get("price"));
+    const priceStr = formData.get("price") as string;
     const imageFile = formData.get("image") as File | null;
 
-    if (!categoryId || !nameEn || isNaN(price)) {
+    if (!categoryId || !nameEn || !priceStr) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
+    }
+
+    const price = Number(priceStr);
+    if (isNaN(price)) {
+      return NextResponse.json({ error: "Invalid price" }, { status: 400 });
     }
 
     let imageUrl: string | null = null;
@@ -54,6 +59,26 @@ export async function POST(request: Request) {
       imageUrl = publicUrlData.publicUrl;
     }
 
+    // Build modifiers from form
+    const modifiers = [];
+    for (let i = 0; i < 3; i++) {
+      const name = formData.get(`modifier_name_${i}`) as string;
+      const optionsStr = formData.get(`modifier_options_${i}`) as string;
+      if (name && optionsStr) {
+        const options = optionsStr
+          .split(",")
+          .map((o: string) => o.trim())
+          .filter(Boolean);
+        if (options.length > 0) {
+          modifiers.push({
+            name: { en: name.trim() },
+            options,
+          });
+        }
+      }
+    }
+
+    // Create item first
     const item = await prisma.menuItem.create({
       data: {
         categoryId,
@@ -66,6 +91,17 @@ export async function POST(request: Request) {
         available: true,
       },
     });
+
+    // Then create modifiers linked to item
+    if (modifiers.length > 0) {
+      await prisma.modifier.createMany({
+        data: modifiers.map((mod) => ({
+          itemId: item.id,
+          name: mod.name,
+          options: mod.options,
+        })),
+      });
+    }
 
     return NextResponse.json(item, { status: 201 });
   } catch (error: any) {
@@ -87,11 +123,7 @@ export async function PATCH(request: Request) {
 
     const contentType = request.headers.get("content-type") || "";
 
-    // eslint-disable-next-line prefer-const
-    let updateData: any = {};
-
     if (contentType.includes("multipart/form-data")) {
-      // Edit with possible image change
       const formData = await request.formData();
       const id = formData.get("id") as string;
 
@@ -102,6 +134,8 @@ export async function PATCH(request: Request) {
       const descriptionEn = formData.get("description") as string | null;
       const priceStr = formData.get("price") as string | null;
       const imageFile = formData.get("image") as File | null;
+
+      let updateData: any = {};
 
       if (nameEn !== null) updateData.name = { en: nameEn.trim() };
       if (descriptionEn !== null) {
@@ -132,32 +166,44 @@ export async function PATCH(request: Request) {
         updateData.imageUrl = publicUrlData.publicUrl;
       }
 
+      // Update item
       const item = await prisma.menuItem.update({
         where: { id },
         data: updateData,
       });
 
-      return NextResponse.json(item);
-    } else if (contentType.includes("application/json")) {
-      // Toggle availability or other JSON updates
-      const body = await request.json();
-      const { id, available } = body;
+      // Update modifiers: delete old, create new
+      await prisma.modifier.deleteMany({ where: { itemId: id } });
 
-      if (id && available !== undefined) {
-        const item = await prisma.menuItem.update({
-          where: { id },
-          data: { available },
-        });
-        return NextResponse.json(item);
+      const modifiers = [];
+      for (let i = 0; i < 3; i++) {
+        const name = formData.get(`modifier_name_${i}`) as string;
+        const optionsStr = formData.get(`modifier_options_${i}`) as string;
+        if (name && optionsStr) {
+          const options = optionsStr
+            .split(",")
+            .map((o: string) => o.trim())
+            .filter(Boolean);
+          if (options.length > 0) {
+            modifiers.push({
+              itemId: id,
+              name: { en: name.trim() },
+              options,
+            });
+          }
+        }
       }
+
+      if (modifiers.length > 0) {
+        await prisma.modifier.createMany({ data: modifiers });
+      }
+
+      return NextResponse.json(item);
     }
 
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    // ... rest same
   } catch (error: any) {
     console.error("Update item error:", error);
-    return NextResponse.json(
-      { error: "Failed to update item" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
 }

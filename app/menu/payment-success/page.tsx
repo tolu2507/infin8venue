@@ -8,13 +8,14 @@ import { CheckCircle2 } from "lucide-react";
 export default async function PaymentSuccess({
   searchParams,
 }: {
-  searchParams: { session_id?: string };
+  searchParams: Promise<{ session_id?: string }>;
 }) {
-  const sessionId = searchParams?.session_id;
-console.log("Payment Success Session ID:", sessionId);
-//   if (!sessionId) {
-//     redirect("/menu");
-//   }
+  const session = await searchParams;
+  const sessionId = session.session_id;
+  console.log("Payment Success Session ID:", sessionId);
+  //   if (!sessionId) {
+  //     redirect("/menu");
+  //   }
 
   const supabase = await createSupabaseServerClient();
   const {

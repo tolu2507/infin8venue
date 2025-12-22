@@ -49,7 +49,9 @@ export default async function MenuPage({
         include: {
           items: {
             where: { available: true },
-            include: { modifiers: true },
+            include: {
+              modifiers: true, // ← Include modifiers
+            },
           },
         },
       },
@@ -85,7 +87,11 @@ export default async function MenuPage({
     },
     include: {
       items: {
-        include: { menuItem: true },
+        include: {
+          menuItem: {
+            include: { modifiers: true }, // ← Include modifiers in open order items too
+          },
+        },
       },
     },
     orderBy: { createdAt: "desc" },
@@ -98,6 +104,7 @@ export default async function MenuPage({
       items: cat.items.map((item) => ({
         ...item,
         price: Number(item.price),
+        modifiers: item.modifiers || [], // ← Serialize modifiers
       })),
     })),
   };
@@ -119,6 +126,7 @@ export default async function MenuPage({
                 name: i.menuItem.name,
                 price: Number(i.priceAtOrder),
                 qty: i.quantity,
+                modifiers: i.menuItem.modifiers || [], // ← Pass modifiers in open order items
               })),
             }
           : null
